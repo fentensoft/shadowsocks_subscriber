@@ -1,0 +1,5 @@
+cmake_minimum_required(VERSION 2.8)
+find_package(CURL REQUIRED)
+add_executable(changeserver main.cpp)
+target_include_directories(changeserver PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include ${CURL_INCLUDE_DIRS}})
+target_link_libraries(changeserver ${CURL_LIBRARIES} pthread)
