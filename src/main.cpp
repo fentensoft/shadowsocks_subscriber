@@ -11,6 +11,7 @@
 
 using namespace std;
 
+
 static const regex urlMatcher("^(.+?):(\\d+?):(.+?):(.+?):(.+?):(.+?)/\\?(.+?)$");
 static const regex timeMatcher("(\\d+\\.?\\d*)\\s?ms");
 static const char * CONFIG_FILE = "/etc/shadowsocks-libev/config.json";
@@ -87,14 +88,12 @@ bool doPing(server_ptr server) {
     string command = "ping -W1 -c1 " + server->hostName;
     auto fin = popen(command.c_str(), "r");
     char buff[512];
-    stringstream output;
     smatch matchResult;
 
     while (fgets(buff, sizeof(buff), fin) != NULL) {
-        output << buff;
+        ret.append(buff);
     }
     pclose(fin);
-    ret = output.str();
     if (regex_search(ret, matchResult, timeMatcher)) {
         server->ping = stof(matchResult[1].str());
         if (server->ping <= 0.0) {
