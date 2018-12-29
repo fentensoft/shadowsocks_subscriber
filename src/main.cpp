@@ -7,6 +7,7 @@
 #include <vector>
 #include <base64.h>
 #include <json.hpp>
+#include <cxxopts.hpp>
 #include <curl/curl.h>
 
 using namespace std;
@@ -14,7 +15,6 @@ using namespace std;
 
 static const regex urlMatcher("^(.+?):(\\d+?):(.+?):(.+?):(.+?):(.+?)/\\?(.+?)$");
 static const regex timeMatcher("(\\d+\\.?\\d*)\\s?ms");
-static const char * CONFIG_FILE = "/etc/shadowsocks-libev/config.json";
 
 struct server_t {
     string hostName;
@@ -113,16 +113,17 @@ size_t writeFunction(void *ptr, size_t size, size_t nmemb, std::string* data) {
 }
 
 int main(int argc, char * argv[]) {
-    if (argc <= 1) {
-        cout << "No subscription URL is given" << endl;
-        return 1;
-    }
+    cxxopts::Options options("SSR subscriber", "To generate shadowsocksr configuration file via subscription URL.");
+    options.add_options()
+        ("u,url", "Subscription URL", cxxopts::value<string>())
+        ("c,config", "Configuration file path", cxxopts::value<string>()->default_value("/etc/shadowsocksrr/config.json"));
+    auto args = options.parse(argc, argv);
 
     CURL * curl = curl_easy_init();
     string response;
     string decoded;
 
-    curl_easy_setopt(curl, CURLOPT_URL, argv[1]);
+    curl_easy_setopt(curl, CURLOPT_URL, args["url"].as<string>().c_str());
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, &writeFunction);
@@ -131,7 +132,6 @@ int main(int argc, char * argv[]) {
     cout << "Fetching server list" << endl;
     curl_easy_perform(curl);
     curl_easy_cleanup(curl);
-    curl = nullptr;
     decoded = base64_decode(response);
 
     istringstream decodedServers(decoded);
@@ -172,10 +172,10 @@ int main(int argc, char * argv[]) {
     }
     cout << serverList[selected - 1]->remarks << " selected" << endl;
     string jsonString = serverList[selected - 1]->toJSON()->dump();
-    ofstream fout(CONFIG_FILE);
+    ofstream fout(args["config"].as<string>());
     fout.write(jsonString.c_str(), jsonString.size());
     fout.close();
-    auto restartProc = popen("sudo supervisorctl restart shadowsocks", "r");
+    auto restartProc = popen("sudo systemctl restart shadowsocksrr-libev@config", "r");
     cout << "Restarting shadowsocks" << endl;
     char buff[512];
     while (fgets(buff, sizeof(buff), restartProc) != NULL) {
