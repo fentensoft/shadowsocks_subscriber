@@ -24,6 +24,7 @@ struct server_t {
     string obfs;
     string password;
     string obfsParam;
+    string protoParam;
     string remarks;
     string group;
     float ping;
@@ -52,6 +53,8 @@ struct server_t {
             value = base64_decode(value);
             if (key == "obfsparam") {
                 obfsParam = value;
+            } else if (key == "protoparam") {
+                protoParam = value;
             } else if (key == "remarks") {
                 remarks = value;
             } else if (key == "group") {
@@ -73,6 +76,7 @@ struct server_t {
         (*ret)["local_port"] = 1080;
         (*ret)["timeout"] = 60;
         (*ret)["obfs_param"] = obfsParam;
+        (*ret)["protocol_param"] = protoParam;
         return ret;
     }
 };
@@ -116,7 +120,7 @@ int main(int argc, char * argv[]) {
     cxxopts::Options options("SSR subscriber", "To generate shadowsocksr configuration file via subscription URL.");
     options.add_options()
         ("u,url", "Subscription URL", cxxopts::value<string>())
-        ("c,config", "Configuration file path", cxxopts::value<string>()->default_value("/etc/shadowsocksrr/config.json"));
+        ("c,config", "Configuration file path", cxxopts::value<string>()->default_value("/etc/shadowsocksr/config.json"));
     auto args = options.parse(argc, argv);
 
     CURL * curl = curl_easy_init();
@@ -175,7 +179,7 @@ int main(int argc, char * argv[]) {
     ofstream fout(args["config"].as<string>());
     fout.write(jsonString.c_str(), jsonString.size());
     fout.close();
-    auto restartProc = popen("sudo systemctl restart shadowsocksrr-libev@config", "r");
+    auto restartProc = popen("sudo systemctl restart shadowsocksr@config", "r");
     cout << "Restarting shadowsocks" << endl;
     char buff[512];
     while (fgets(buff, sizeof(buff), restartProc) != NULL) {
